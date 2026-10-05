@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>炫幻K歌练歌房</title>
+<!-- 应用化：可“添加到主屏幕”成为带图标的独立应用 -->
+<meta name="theme-color" content="#03001c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="炫幻K歌练歌房">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,"PingFang SC","Helvetica Neue",sans-serif;-webkit-tap-highlight-color:transparent;}
+body{
+  background: radial-gradient(circle at 20% 20%, #240046, #03001c 70%);
+  color:#fff;
+  min-height:100vh;
+  min-height:100dvh;
+  overflow:hidden;
+}
+.bg-neon{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background-image:
+    radial-gradient(circle at 10% 80%, rgba(255,0,150,0.15), transparent 30%),
+    radial-gradient(circle at 90% 10%, rgba(0,200,255,0.15), transparent 30%);
+  animation: bgPulse 8s ease-in-out infinite alternate;
+  z-index:-1;
+}
+@keyframes bgPulse{
+  0%{filter:hue-rotate(0deg)}
+  100%{filter:hue-rotate(25deg)}
+}
+
+/* 顶部标题栏 */
+.header{
+  padding:12px 24px;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  position:relative;
+  border-bottom:1px solid rgba(255,255,255,0.15);
+  background:rgba(0,0,0,0.4);
+  height:60px;
+}
+.header .left-area{width:140px;}
+.header .center-title{position:absolute;left:50%;transform:translateX(-50%);}
+.header h1{
+  font-size:24px;
+  background:linear-gradient(90deg,#ff2ec4,#00e5ff);
+  -webkit-background-clip:text;color:transparent;
+  text-shadow:0 0 12px #ff2ec477;
+  white-space:nowrap;
+}
+.btn{
+  padding:8px 12px;border:none;border-radius:8px;
+  cursor:pointer;font-weight:bold;transition:0.2s;
+  background:linear-gradient(135deg,#7209b7,#3a0ca3);
+  color:#fff;
+  box-shadow:0 0 10px #7209b766;
+  touch-action:manipulation;
+  user-select:none;
+}
+.btn:active{transform:scale(0.95);}
+.btn:hover{transform:scale(1.05);box-shadow:0 0 18px #7209b7aa;}
+.btn-cyan{background:linear-gradient(135deg,#0096c7,#00b4d8);box-shadow:0 0 10px #00b4d866;}
+.btn-red{background:linear-gradient(135deg,#d00000,#dc2f02);box-shadow:0 0 10px #dc2f0266;}
+.btn-green{background:linear-gradient(135deg,#208a49,#27ae60);box-shadow:0 0 10px #27ae6066;}
+.btn-orange{background:linear-gradient(135deg,#e67700,#f77f00);box-shadow:0 0 10px #f77f0066;}
+.btn-pink{background:linear-gradient(135deg,#d62828,#f72585);box-shadow:0 0 10px #f7258566;}
+
+/* 歌单侧边隐藏面板 */
+.sidebar{
+  position:absolute;top:60px;left:0;width:340px;height:calc(100vh - 60px);
+  background:rgba(0,0,0,0.85);
+  border-right:1px solid rgba(255,255,255,0.15);
+  padding:16px;
+  transition:transform 0.4s cubic-bezier(0.2,0,0.2,1);
+  z-index:10;
+  overflow-y:auto;
+}
+.sidebar.hidden{transform:translateX(-100%);}
+.search-area{display:flex;gap:8px;margin-bottom:16px;}
+#searchInput{flex:1;min-width:0;padding:8px;border-radius:6px;border:none;background:#111;color:#fff;font-size:15px;}
+.search-select{
+  flex-shrink:0;padding:8px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.25);
+  background:#1a1030;color:#fff;font-size:14px;cursor:pointer;max-width:132px;
+}
+.upload-area{margin:16px 0;}
+#fileInput{display:none;}
+.songList{
+  margin-top:12px;
+  display:flex;flex-direction:column;gap:6px;
+}
+.song-item{
+  padding:10px;border-radius:6px;background:rgba(255,255,255,0.08);
+  display:flex;justify-content:space-between;align-items:center;
+  transition:0.2s;cursor:pointer;
+}
+.song-item.active{background:rgba(255,50,120,0.35);}
+.song-item:hover{background:rgba(255,255,255,0.16);}
+.song-item .song-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.song-item .song-actions{display:flex;gap:6px;flex-shrink:0;}
+.song-item .play-song,.song-item .del{padding:4px 6px;font-size:12px;}
+
+/* 手机侧栏背景遮罩（默认桌面隐藏） */
+.backdrop{display:none;}
+
+/* 主舞台区域 */
+.stage{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:26px;
+  padding:26px;
+  height:calc(100vh - 60px);
+}
+
+/* ===== 两个窗口边框加宽 + 霓虹美化 ===== */
+.player-wrap, .recorder-wrap{
+  position:relative;
+  background:
+    linear-gradient(#05010f,#05010f) padding-box,
+    linear-gradient(135deg,#ff2ec4,#00e5ff,#ff9a00,#ff2ec4) border-box;
+  border:5px solid transparent;
+  border-radius:22px;
+  overflow:hidden;
+  box-shadow:
+    0 0 25px rgba(255,46,196,0.35),
+    0 0 45px rgba(0,229,255,0.22),
+    inset 0 0 34px rgba(255,46,196,0.07);
+  transition:box-shadow 0.3s ease, filter 0.3s ease;
+}
+.player-wrap::before, .recorder-wrap::before{
+  content:"";
+  position:absolute;
+  top:-2px;left:-2px;right:-2px;height:5px;
+  background:linear-gradient(90deg,#ff2ec4,#00e5ff,#ff9a00);
+  border-radius:22px 22px 0 0;
+  z-index:6;
+  pointer-events:none;
+  opacity:0.85;
+}
+.player-wrap:hover, .recorder-wrap:hover{
+  box-shadow:
+    0 0 45px rgba(255,46,196,0.55),
+    0 0 75px rgba(0,229,255,0.35),
+    inset 0 0 34px rgba(0,229,255,0.10);
+}
+.player-wrap:fullscreen, .recorder-wrap:fullscreen{border-radius:0;border-width:0;}
+
+video{width:100%;height:100%;object-fit:contain;background:#000;}
+
+/* 录制预览窗口内：左上顶部状态标志（仅录制状态，非装饰提示） */
+.rec-status-in-rec{
+  position:absolute;
+  top:12px;
+  left:12px;
+  z-index:8;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:16px;
+  font-weight:bold;
+  color:#fff;
+  text-shadow:0 0 10px #ff0000, 0 0 4px #000;
+  pointer-events:none;
+}
+.rec-status-in-rec.hidden{display:none;}
+.rec-light{
+  width:12px;height:12px;border-radius:50%;
+  background:#666;
+  box-shadow:0 0 6px #333;
+}
+.rec-light.blink{
+  background:#ff2222;
+  box-shadow:0 0 10px #ff2222, 0 0 4px #ff8888;
+  animation: blink 0.7s infinite;
+}
+@keyframes blink{
+  0%{opacity:1;}
+  50%{opacity:0.2;}
+  100%{opacity:1;}
+}
+
+/* 录制预览窗口内：右上角计时（录制功能显示，非装饰提示） */
+.rec-timer{
+  position:absolute;
+  top:12px;
+  right:12px;
+  font-size:22px;
+  font-weight:bold;
+  color:#fff;
+  text-shadow:0 0 8px #000;
+  z-index:5;
+  pointer-events:none;
+}
+.rec-timer.hidden{display:none;}
+
+/* 播放器底部控件：自动隐藏（桌面） */
+.controls{
+  position:absolute;bottom:0;left:0;width:100%;
+  padding:14px;background:linear-gradient(transparent, rgba(0,0,0,0.88));
+  transition:opacity 0.3s;opacity:0;
+}
+/* 桌面（支持悬停的设备）才用 hover 呼出控件；
+   触屏设备会被“粘性hover”干扰，改用 .show 类由 JS 控制 */
+@media (hover: hover){
+  .player-wrap:hover .controls{opacity:1;}
+  .recorder-wrap:hover .recControls{opacity:1;}
+}
+.recControls{
+  position:absolute;bottom:0;left:0;width:100%;
+  padding:14px;background:linear-gradient(transparent, rgba(0,0,0,0.88));
+  transition:opacity 0.3s;opacity:0;
+}
+.ctrl-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.progress{
+  width:100%;height:6px;background:#333;border-radius:3px;margin:8px 0;
+  cursor:pointer;
+}
+.progress-bar{height:100%;background:linear-gradient(90deg,#ff2ec4,#00e5ff);border-radius:3px;width:0%;}
+input[type="range"]{accent-color:#00e5ff;}
+
+/* 单句复唱区间滑块行（默认隐藏，进入单句复唱模式后显示） */
+.sentence-row{
+  display:none;
+  margin-top:10px;
+  gap:8px;
+  align-items:center;
+  padding:8px 10px;
+  border-radius:8px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(0,229,255,0.25);
+}
+.sentence-row.show{display:flex;}
+.sentence-row .sec-label{
+  color:#ffcc00;font-weight:bold;white-space:nowrap;
+}
+.sentence-row .sec-val{
+  font-size:13px;color:#ddd;white-space:nowrap;
+}
+.sentence-row .sec-val b{color:#00e5ff;}
+.sentence-row input[type="range"]{flex:1;min-width:90px;cursor:pointer;}
+
+/* 控件呼出小圆钮（仅手机显示） */
+.ctrl-toggle{
+  display:none;
+  position:absolute;right:10px;bottom:10px;z-index:12;
+  width:44px;height:44px;border-radius:50%;
+  border:none;background:linear-gradient(135deg,#ff2ec4,#00e5ff);
+  color:#05010f;font-size:20px;font-weight:bold;cursor:pointer;
+  box-shadow:0 0 14px rgba(0,229,255,0.55);
+  touch-action:manipulation;user-select:none;
+}
+/* 歌单抽屉打开时，隐藏两个窗口的 ☰ 圆钮，避免遮挡搜索/上传 */
+body.song-drawer-open .ctrl-toggle{display:none !important;}
+
+/* ============ 手机端响应式（触屏友好） ============ */
+@media (max-width: 900px){
+  body{overflow:auto;}
+  .header{
+    height:54px;padding:10px 12px;
+    position:sticky;top:0;z-index:20;
+  }
+  .header .left-area{width:auto;}
+  .header .center-title{position:static;transform:none;}
+  .header h1{font-size:18px;}
+  .header .btn{padding:8px 12px;font-size:15px;}
+
+  /* 手机：歌单变为底部半高抽屉（不遮 MV 窗口上方） */
+  .sidebar{
+    top:auto;bottom:0;left:0;right:0;width:100%;
+    height:62dvh;max-height:72dvh;
+    border-right:none;border-top:1px solid rgba(255,255,255,0.15);
+    padding:14px 14px 26px;
+    border-radius:18px 18px 0 0;
+    box-shadow:0 -8px 34px rgba(0,0,0,0.6);
+    transform:none;
+  }
+  .sidebar.hidden{transform:translateY(110%);}
+  .backdrop{
+    display:block;
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.55);
+    z-index:9;
+    opacity:0;pointer-events:none;
+    transition:opacity 0.3s;
+  }
+  .backdrop.show{opacity:1;pointer-events:auto;}
+
+  /* 舞台单列堆叠，页面可上下滚动 */
+  .stage{
+    grid-template-columns:1fr;
+    height:auto;
+    padding:12px 12px 24px;
+    gap:0;
+  }
+  .player-wrap,.recorder-wrap{height:46vh;height:46dvh;margin-bottom:16px;}
+
+  /* 手机上控件默认隐藏，点小圆钮或点画面呼出 */
+  .ctrl-toggle{display:flex;align-items:center;justify-content:center;}
+  /* 手机端控件只由 .show 类控制（hover 已在 @media(hover:hover) 里限定，
+     不会再干扰触屏，两个窗口的开关各自对应各自窗口） */
+  .controls,.recControls{
+    opacity:0;pointer-events:none;
+    max-height:72%;overflow-y:auto;padding-bottom:58px;
+  }
+  .controls.show,.recControls.show{opacity:1;pointer-events:auto;}
+  .progress{height:10px;}
+  .ctrl-row{gap:6px;}
+  .ctrl-row .btn{margin:1px 0;}
+  .sentence-row .sec-label{font-size:13px;}
+  .sentence-row input[type="range"]{min-width:60px;}
+
+  /* 歌单项加大触控区域，整行可点 */
+  .song-item{padding:12px 10px;cursor:pointer;}
+  .song-item .play-song,.song-item .del{padding:10px 12px;font-size:15px;}
+  .upload-area .btn,#selectFiles{width:100%;padding:12px;}
+  #searchInput{padding:11px;font-size:16px;}
+  .search-select{padding:11px 8px;font-size:15px;max-width:150px;}
+  .search-area .btn{padding:11px 12px;}
+}
+/* 手机横屏：两窗口并排恢复，充分利用宽度 */
+@media (max-width: 900px) and (orientation: landscape){
+  .stage{grid-template-columns:1fr 1fr;gap:12px;padding:12px;}
+  .player-wrap,.recorder-wrap{height:auto;min-height:70vh;margin-bottom:0;}
+  .header{position:static;}
+}
+</style>
+</head>
+<body>
+<div class="bg-neon"></div>
+
+<div class="header">
+  <div class="left-area">
+    <button class="btn" id="toggleSidebar">📃 歌单</button>
+  </div>
+  <div class="center-title">
+    <h1>🎤 炫幻K歌练歌房</h1>
+  </div>
+  <div class="right-area"></div>
+</div>
+
+<!-- 手机侧栏遮罩 -->
+<div class="backdrop" id="backdrop"></div>
+
+<!-- 左侧隐藏歌单面板 -->
+<div class="sidebar hidden" id="sidebar">
+  <h3>🎶 歌曲库</h3>
+  <div class="search-area">
+    <select id="searchEngine" class="search-select" title="选择搜索平台">
+      <option value="web">🌐 全网搜索</option>
+      <option value="bilibili">B站</option>
+      <option value="youtube">YouTube</option>
+      <option value="wangyi">网易云音乐</option>
+      <option value="qq">QQ音乐</option>
+      <option value="douyin">抖音</option>
+    </select>
+    <input id="searchInput" placeholder="输入歌名/关键词，回车搜索">
+    <button class="btn" id="openSearch">搜索</button>
+  </div>
+  <div class="upload-area">
+    <button class="btn btn-cyan" id="selectFiles">📂 批量上传本地 MP3/MP4/MOV</button>
+    <input type="file" id="fileInput" multiple accept=".mp3,.mp4,.mov,audio/*,video/*">
+  </div>
+  <div class="songList" id="songList"></div>
+</div>
+
+<!-- 舞台：MV播放窗口 + 录制预览窗口 -->
+<div class="stage">
+  <div class="player-wrap" id="playerWrap">
+    <video id="mvPlayer" preload="none" playsinline webkit-playsinline x5-playsinline></video>
+    <div class="controls">
+      <div class="progress" id="progressBar">
+        <div class="progress-bar" id="progressInner"></div>
+      </div>
+      <div class="ctrl-row">
+        <button class="btn" id="playBtn">▶ 播放</button>
+        <button class="btn btn-green" id="playModeBtn">顺序播放</button>
+        <button class="btn btn-orange" id="loopSingleBtn">单曲循环</button>
+        <button class="btn btn-pink" id="loopSentenceBtn">单句复唱</button>
+        <button class="btn" id="exitPracticeBtn">退出练习</button>
+        <button class="btn btn-cyan" id="toggleCam">📷 摄像头</button>
+        <button class="btn" id="fullPlayer">⛶ 全屏</button>
+      </div>
+      <div class="ctrl-row">
+        <input type="range" id="volSlider" min="0" max="3" step="0.05" value="1.5">
+        <span>增益</span>
+        <input type="range" id="offsetSlider" min="-300" max="300" step="10" value="0">
+        <span>偏移：<span id="offsetText">0ms</span></span>
+        <select id="audioMode" class="btn">
+          <option value="original">原音</option>
+          <option value="mic">麦克风</option>
+          <option value="mix">混合音</option>
+        </select>
+      </div>
+      <!-- 单句复唱区间：起点滑块 + 终点滑块 -->
+      <div class="ctrl-row sentence-row" id="sentenceRow">
+        <span class="sec-label">复唱区间</span>
+        <input type="range" id="sentenceStartSlider" min="0" max="0" step="0.1" value="0" title="句子起点">
+        <span class="sec-val">起点 <b id="sentenceStartText">00:00</b></span>
+        <input type="range" id="sentenceEndSlider" min="0" max="0" step="0.1" value="0" title="句子终点">
+        <span class="sec-val">终点 <b id="sentenceEndText">00:00</b></span>
+      </div>
+    </div>
+    <button class="ctrl-toggle" id="mvCtrlToggle" title="显示/隐藏控件">☰</button>
+  </div>
+
+  <div class="recorder-wrap" id="recWrap">
+    <video id="recPreview" autoplay muted playsinline webkit-playsinline x5-playsinline></video>
+    <div class="rec-status-in-rec hidden" id="recStatusArea">
+      <div class="rec-light" id="recLight"></div>
+      <span id="recStatusText"></span>
+    </div>
+    <div class="rec-timer hidden" id="recTimer">00:00</div>
+    <div class="recControls">
+      <div class="ctrl-row">
+        <button class="btn btn-red" id="recStart">● 开始录制</button>
+        <button class="btn" id="recStop">停止</button>
+        <button class="btn" id="recReset">清空</button>
+        <button class="btn btn-cyan" id="fullRec">⛶ 全屏</button>
+      </div>
+    </div>
+    <button class="ctrl-toggle" id="recCtrlToggle" title="显示/隐藏控件">☰</button>
+  </div>
+</div>
+
+<script>
+// ========== 全局变量 ==========
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+let songList = (JSON.parse(localStorage.getItem('kSongList')) || []).filter(s=>s && (s.type === 'bilibili' || s.url));
+let mediaRecorder;
+let recChunks = [];
+let camStream = null;
+let micStream = null;
+let isCamMode = false;
+let activeFullscreenEl = null;
+
+// ===== 播放模式变量 =====
+let playMode = "order"; // order顺序 / random随机
+let currentSongIndex = 0;
+
+// ===== 练习模式变量 =====
+let practiceMode = "normal"; // normal正常 / single单曲循环 / sentence单句复唱
+let sentenceStart = 0; // 单句复唱区间起点(秒)
+let sentenceEnd = 0;   // 单句复唱区间终点(秒)
+
+// ===== Web Audio 音量增益 + 音频偏移补偿 =====
+let audioCtx = null;
+let gainNode = null;
+let compressorNode = null;
+let delayNode = null;
+let mediaSource = null;
+let isCasting = false;
+let usePlainAudio = false; // WebAudio 不可用时回退为普通音量控制
+
+// 检测投屏状态
+function checkIsCasting(){
+  if(!document.pictureInPictureElement && mvPlayer.remote && mvPlayer.remote.state !== 'disconnected'){
+    return true;
+  }
+  return false;
+}
+
+// 初始化音频增益链路（iOS/旧浏览器失败时回退普通音量）
+async function initAudioGain(){
+  if(audioCtx || usePlainAudio) return;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if(!AudioContext){ usePlainAudio = true; return; }
+  try{
+    audioCtx = new AudioContext();
+    gainNode = audioCtx.createGain();
+    compressorNode = audioCtx.createDynamicsCompressor();
+    delayNode = audioCtx.createDelay(0.3);
+
+    compressorNode.threshold.value = -24;
+    compressorNode.knee.value = 12;
+    compressorNode.ratio.value = 4;
+    compressorNode.attack.value = 0.003;
+    compressorNode.release.value = 0.25;
+
+    mediaSource = audioCtx.createMediaElementSource(mvPlayer);
+    mediaSource.connect(gainNode);
+    gainNode.connect(delayNode);
+    delayNode.connect(compressorNode);
+    compressorNode.connect(audioCtx.destination);
+
+    gainNode.gain.value = Number($('#volSlider').value);
+    updateAudioOffset();
+  }catch(err){
+    // 创建媒体源失败（常见于 iOS/部分安卓 WebView）：销毁节点，回退普通音量
+    try{ if(audioCtx) audioCtx.close(); }catch(e){}
+    audioCtx = null; gainNode = null; delayNode = null; compressorNode = null;
+    usePlainAudio = true;
+  }
+}
+
+// 更新音频偏移值
+function updateAudioOffset(){
+  if(!delayNode || !audioCtx) return;
+  const ms = Number($('#offsetSlider').value);
+  $('#offsetText').textContent = ms + "ms";
+  if(ms >= 0){
+    delayNode.delayTime.value = ms / 1000;
+  }else{
+    delayNode.delayTime.value = 0;
+  }
+}
+
+// 录制计时变量
+let recStartTime = null;
+let recTimerInterval = null;
+
+// DOM元素
+const sidebar = $('#sidebar');
+const backdrop = $('#backdrop');
+const toggleSidebar = $('#toggleSidebar');
+const songListEl = $('#songList');
+const fileInput = $('#fileInput');
+const selectFiles = $('#selectFiles');
+
+const mvPlayer = $('#mvPlayer');
+const playBtn = $('#playBtn');
+const playModeBtn = $('#playModeBtn');
+const loopSingleBtn = $('#loopSingleBtn');
+const loopSentenceBtn = $('#loopSentenceBtn');
+const exitPracticeBtn = $('#exitPracticeBtn');
+
+const toggleCam = $('#toggleCam');
+const fullPlayer = $('#fullPlayer');
+const volSlider = $('#volSlider');
+const offsetSlider = $('#offsetSlider');
+const offsetText = $('#offsetText');
+const audioMode = $('#audioMode');
+const progressBar = $('#progressBar');
+const progressInner = $('#progressInner');
+
+const recPreview = $('#recPreview');
+const recStart = $('#recStart');
+const recStop = $('#recStop');
+const recReset = $('#recReset');
+const fullRec = $('#fullRec');
+const playerWrap = $('#playerWrap');
+const recWrap = $('#recWrap');
+const mvControls = $('#playerWrap .controls');
+const recControlsEl = $('#recWrap .recControls');
+const mvCtrlToggle = $('#mvCtrlToggle');
+const recCtrlToggle = $('#recCtrlToggle');
+
+const recStatusArea = $('#recStatusArea');
+const recLight = $('#recLight');
+const recStatusText = $('#recStatusText');
+const recTimer = $('#recTimer');
+
+// ===== 单句复唱区间滑块 =====
+const sentenceRow = $('#sentenceRow');
+const sentenceStartSlider = $('#sentenceStartSlider');
+const sentenceEndSlider = $('#sentenceEndSlider');
+const sentenceStartText = $('#sentenceStartText');
+const sentenceEndText = $('#sentenceEndText');
+
+// 格式化时间：秒 → mm:ss
+function formatTime(sec){
+  sec = Number(sec) || 0;
+  if(sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+// 同步两个滑块的值到变量与文字
+function syncSentenceSliders(){
+  sentenceStart = Number(sentenceStartSlider.value) || 0;
+  sentenceEnd = Number(sentenceEndSlider.value) || 0;
+  const max = Number(sentenceEndSlider.max) || 0;
+  // 保证区间始终 起点 < 终点
+  if(sentenceStart >= sentenceEnd){
+    sentenceEnd = Math.min(max, sentenceStart + 1);
+    sentenceEndSlider.value = sentenceEnd;
+  }
+  sentenceStartText.textContent = formatTime(sentenceStart);
+  sentenceEndText.textContent = formatTime(sentenceEnd);
+}
+
+// 起点滑块拖动
+sentenceStartSlider.oninput = ()=>{
+  let s = Number(sentenceStartSlider.value) || 0;
+  let e = Number(sentenceEndSlider.value) || 0;
+  const max = Number(sentenceEndSlider.max) || 0;
+  if(s >= e){
+    e = Math.min(max, s + 1);
+    sentenceEndSlider.value = e;
+  }
+  sentenceStart = s;
+  sentenceEnd = e;
+  sentenceStartText.textContent = formatTime(s);
+  sentenceEndText.textContent = formatTime(e);
+};
+// 终点滑块拖动
+sentenceEndSlider.oninput = ()=>{
+  let s = Number(sentenceStartSlider.value) || 0;
+  let e = Number(sentenceEndSlider.value) || 0;
+  if(e <= s){
+    s = Math.max(0, e - 1);
+    sentenceStartSlider.value = s;
+  }
+  sentenceStart = s;
+  sentenceEnd = e;
+  sentenceStartText.textContent = formatTime(s);
+  sentenceEndText.textContent = formatTime(e);
+};
+
+// 歌曲加载完成后，把区间滑块范围设为整首歌时长
+mvPlayer.addEventListener('loadedmetadata', ()=>{
+  const d = mvPlayer.duration || 0;
+  sentenceStartSlider.max = d;
+  sentenceEndSlider.max = d;
+  sentenceEndSlider.value = d;
+  syncSentenceSliders();
+});
+
+// ===== 计时相关 =====
+function startRecTimer(){
+  recStartTime = Date.now();
+  recTimerInterval = setInterval(()=>{
+    const diff = (Date.now() - recStartTime)/1000;
+    recTimer.textContent = formatTime(diff);
+  }, 200);
+}
+function stopRecTimer(){
+  if(recTimerInterval){
+    clearInterval(recTimerInterval);
+    recTimerInterval = null;
+  }
+}
+function resetRecTimer(){
+  stopRecTimer();
+  recTimer.textContent = "00:00";
+}
+
+// 保存歌单（本地上传文件刷新后无法恢复，仅持久化可恢复的条目）
+function saveSongList(){
+  localStorage.setItem('kSongList', JSON.stringify(songList.filter(s=>!s.fileObj)));
+}
+
+// 渲染歌单，标记当前播放歌曲
+function renderSongList(){
+  songListEl.innerHTML = '';
+  songList.forEach((song, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'song-item' + (idx === currentSongIndex ? ' active' : '');
+    div.dataset.idx = idx;
+    div.innerHTML = `
+      <span class="song-name" title="${(song.url || song.name).replace(/"/g,'&quot;')}">${(song.name||'').replace(/</g,'&lt;')}</span>
+      <div class="song-actions">
+        <button class="btn play-song" data-idx="${idx}">播放</button>
+        <button class="btn del" data-idx="${idx}">删除</button>
+      </div>
+    `;
+    // 整行点击即可播放（手机更方便），按钮点击不重复触发
+    div.addEventListener('click', (e)=>{
+      if(e.target.closest('.del') || e.target.closest('.play-song')) return;
+      playSongByIndex(idx);
+    });
+    songListEl.appendChild(div);
+  })
+  $$('.play-song').forEach(b=>b.onclick=()=>{
+    const i = Number(b.dataset.idx);
+    playSongByIndex(i);
+  })
+  $$('.del').forEach(b=>b.onclick=()=>{
+    const i = Number(b.dataset.idx);
+    songList.splice(i,1);
+    if(currentSongIndex >= songList.length) currentSongIndex = 0;
+    saveSongList();renderSongList();
+  })
+}
+
+// 根据索引加载并播放歌曲
+async function playSongByIndex(idx){
+  if(songList.length === 0) return;
+  currentSongIndex = idx;
+  const song = songList[idx];
+  stopCam();
+  isCamMode = false;
+  // 切歌：重置单句区间到整首歌
+  if(mvPlayer.duration){
+    sentenceStartSlider.value = 0;
+    sentenceEndSlider.value = mvPlayer.duration;
+    syncSentenceSliders();
+  }
+  // 手机端：选歌后自动收起侧栏
+  closeSidebar();
+  if(song.type === 'bilibili'){
+    openBiliWindow(song.name);
+    return;
+  }else if(song.fileObj){
+    const url = URL.createObjectURL(song.fileObj);
+    mvPlayer.src = url;
+    mvPlayer.load();
+  }
+  renderSongList();
+  isCasting = checkIsCasting();
+  if(!isCasting && !audioCtx){
+    await initAudioGain();
+  }
+  if(audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+  await mvPlayer.play().catch(()=>{});
+}
+
+// 自动下一首逻辑
+function playNextSong(){
+  //练习模式优先判断
+  if(practiceMode === "single"){
+    //单曲循环：重播当前歌曲
+    mvPlayer.currentTime = 0;
+    mvPlayer.play().catch(()=>{});
+    return;
+  }
+  if(practiceMode === "sentence"){
+    //单句复唱：回到句子起点循环
+    mvPlayer.currentTime = sentenceStart;
+    mvPlayer.play().catch(()=>{});
+    return;
+  }
+  //正常模式：顺序/随机
+  if(songList.length <= 0) return;
+  if(playMode === "order"){
+    currentSongIndex = (currentSongIndex + 1) % songList.length;
+  }else{
+    let newIdx;
+    do{
+      newIdx = Math.floor(Math.random() * songList.length);
+    }while(newIdx === currentSongIndex && songList.length > 1);
+    currentSongIndex = newIdx;
+  }
+  playSongByIndex(currentSongIndex);
+}
+
+// ===== 手机控件呼出/收起（默认隐藏）=====
+function isMobileLayout(){ return window.matchMedia('(max-width:900px)').matches; }
+function toggleMobileControls(controlsEl, chipEl){
+  const show = !controlsEl.classList.contains('show');
+  controlsEl.classList.toggle('show', show);
+  chipEl.textContent = show ? '▼' : '☰';
+}
+mvCtrlToggle.addEventListener('click', (e)=>{ e.stopPropagation(); toggleMobileControls(mvControls, mvCtrlToggle); });
+recCtrlToggle.addEventListener('click', (e)=>{ e.stopPropagation(); toggleMobileControls(recControlsEl, recCtrlToggle); });
+// 手机上点画面即可呼出/收起控件
+mvPlayer.addEventListener('click', ()=>{ if(isMobileLayout()) toggleMobileControls(mvControls, mvCtrlToggle); });
+recPreview.addEventListener('click', ()=>{ if(isMobileLayout()) toggleMobileControls(recControlsEl, recCtrlToggle); });
+
+// ===== 侧栏开关 + 遮罩 =====
+function closeSidebar(){
+  sidebar.classList.add('hidden');
+  backdrop.classList.remove('show');
+  document.body.classList.remove('song-drawer-open');
+}
+toggleSidebar.onclick = ()=>{
+  const willOpen = sidebar.classList.contains('hidden');
+  sidebar.classList.toggle('hidden');
+  backdrop.classList.toggle('show', willOpen);
+  // 歌单抽屉打开时隐藏两个窗口的 ☰ 小圆钮，避免遮挡搜索/上传操作
+  document.body.classList.toggle('song-drawer-open', willOpen);
+}
+backdrop.onclick = ()=>{
+  closeSidebar();
+}
+
+// ===== 全网多平台搜索弹窗 =====
+const SEARCH_ENGINES = {
+  // 全网搜索：自动附加“音乐 歌曲 MV”关键词，结果仅限音乐与音乐视频类
+  web:      kw => 'https://www.bing.com/search?q=' + encodeURIComponent(kw + ' 音乐 歌曲 MV'),
+  bilibili: kw => 'https://search.bilibili.com/all?keyword=' + encodeURIComponent(kw),
+  youtube:  kw => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(kw),
+  wangyi:   kw => 'https://music.163.com/#/search/m/?s=' + encodeURIComponent(kw),
+  qq:       kw => 'https://y.qq.com/n/ryqq/search?w=' + encodeURIComponent(kw),
+  douyin:   kw => 'https://www.douyin.com/search/' + encodeURIComponent(kw)
+};
+const searchEngine = $('#searchEngine');
+const searchInput = $('#searchInput');
+const openSearch = $('#openSearch');
+
+// 在新标签页打开搜索（标准写法，保留练歌房当前页；电脑浏览器一定保留，
+// 手机系统浏览器 Chrome/Safari 也会保留，练歌房所在页不会被替换）
+function openExternal(url){
+  const w = window.open(url, '_blank');
+  if(!w){
+    // 弹窗被拦截时回退：改用链接新标签打开
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+}
+
+function openSearchWindow(keyword){
+  const kw = keyword.trim();
+  if(!kw) return alert('请输入搜索关键词！');
+  const build = SEARCH_ENGINES[searchEngine.value];
+  if(!build) return alert('未识别的搜索平台，请重新选择。');
+  openExternal(build(kw));
+}
+openSearch.onclick = ()=> openSearchWindow(searchInput.value);
+searchInput.addEventListener('keydown',(e)=>{
+  if(e.key === 'Enter') openSearchWindow(searchInput.value);
+})
+
+// 保留 B站直达（歌单里 B站类型歌曲播放用）
+function openBiliWindow(keyword){
+  const kw = keyword.trim();
+  if(!kw) return alert('请输入歌曲名称！');
+  openExternal(`https://search.bilibili.com/all?keyword=${encodeURIComponent(kw)}`);
+}
+
+// 批量上传本地文件
+selectFiles.onclick = ()=> fileInput.click();
+fileInput.onchange = async (e)=>{
+  const files = Array.from(e.target.files);
+  for(const f of files){
+    songList.push({
+      name: f.name,
+      type:'local',
+      fileObj: f
+    })
+  }
+  saveSongList();renderSongList();
+  fileInput.value = '';
+}
+
+// MV播放控制
+playBtn.onclick = async ()=>{
+  if(songList.length === 0) return alert("歌单为空，请先添加歌曲！");
+  isCasting = checkIsCasting();
+  if(!isCasting && !audioCtx){
+    await initAudioGain();
+  }
+  if(audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+  if(mvPlayer.paused){
+    // 单句复唱模式：恢复播放时从区间起点开始
+    if(practiceMode === "sentence" && sentenceEnd > 0){
+      mvPlayer.currentTime = sentenceStart;
+    }
+    await mvPlayer.play().catch(()=>{});
+  }else{
+    mvPlayer.pause();
+  }
+}
+mvPlayer.onplay = ()=> playBtn.textContent = '⏸ 暂停';
+mvPlayer.onpause = ()=> playBtn.textContent = '▶ 播放';
+
+// 歌曲播放结束自动触发
+mvPlayer.onended = ()=>{
+  playNextSong();
+}
+
+// 播放模式切换按钮：顺序/随机
+playModeBtn.onclick = ()=>{
+  if(playMode === "order"){
+    playMode = "random";
+    playModeBtn.textContent = "随机播放";
+  }else{
+    playMode = "order";
+    playModeBtn.textContent = "顺序播放";
+  }
+}
+
+// =========练习模式按键事件=========
+//单曲循环
+loopSingleBtn.onclick = ()=>{
+  practiceMode = "single";
+  sentenceRow.classList.remove('show');
+}
+//单句复唱：进入后显示区间滑块，并默认标记整首歌
+loopSentenceBtn.onclick = ()=>{
+  practiceMode = "sentence";
+  sentenceRow.classList.add('show');
+  if(mvPlayer.duration){
+    sentenceStartSlider.value = 0;
+    sentenceEndSlider.value = mvPlayer.duration;
+    syncSentenceSliders();
+  }
+}
+//退出练习模式
+exitPracticeBtn.onclick = ()=>{
+  practiceMode = "normal";
+  sentenceRow.classList.remove('show');
+}
+
+// MV/摄像头切换
+toggleCam.onclick = async ()=>{
+  if(!isCamMode){
+    try{
+      camStream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+    }catch(e){
+      try{ camStream = await navigator.mediaDevices.getUserMedia({video:true}); }
+      catch(e2){ return alert('无法获取摄像头权限，请在浏览器设置中允许后重试。'); }
+    }
+    mvPlayer.srcObject = camStream;
+    mvPlayer.play().catch(()=>{});
+    isCamMode = true;
+    toggleCam.textContent = '🎬 返回MV';
+  }else{
+    stopCam();
+    toggleCam.textContent = '📷 摄像头';
+  }
+}
+function stopCam(){
+  if(camStream){
+    camStream.getTracks().forEach(t=>t.stop());
+    camStream = null;
+  }
+  mvPlayer.srcObject = null;
+}
+
+// ===== 增益滑块事件
+volSlider.oninput = ()=> {
+  const val = Number(volSlider.value);
+  if(usePlainAudio || checkIsCasting()){
+    // 普通音量最大为1，增益>=1即满音量
+    mvPlayer.volume = val >= 1 ? 1 : val;
+  }else if(gainNode){
+    gainNode.gain.value = val;
+  }
+}
+
+// 音频偏移滑块事件
+offsetSlider.oninput = ()=>{
+  updateAudioOffset();
+}
+
+// MV进度条 + 单句复唱区间回跳
+mvPlayer.ontimeupdate = ()=>{
+  if(mvPlayer.duration){
+    const pct = mvPlayer.currentTime / mvPlayer.duration * 100;
+    progressInner.style.width = pct + '%';
+  }
+  // 单句复唱：播放到终点则回跳到起点
+  if(practiceMode === "sentence" && sentenceEnd > 0 && mvPlayer.currentTime >= sentenceEnd){
+    mvPlayer.currentTime = sentenceStart;
+  }
+}
+progressBar.onclick = (e)=>{
+  if(!mvPlayer.duration) return;
+  const rect = progressBar.getBoundingClientRect();
+  const pos = (e.clientX - rect.left)/rect.width;
+  mvPlayer.currentTime = pos * mvPlayer.duration;
+}
+
+// ===== 全屏逻辑（兼容 iOS Safari / 旧版 WebKit）=====
+function fsEl(){ return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || null; }
+function requestFs(el){
+  if(el.requestFullscreen) return el.requestFullscreen();
+  if(el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+  if(el.mozRequestFullScreen) return el.mozRequestFullScreen();
+  return Promise.reject(new Error('no-fs'));
+}
+function exitFs(){
+  if(document.exitFullscreen) return document.exitFullscreen();
+  if(document.webkitExitFullscreen) return document.webkitExitFullscreen();
+  if(document.mozCancelFullScreen) return document.mozCancelFullScreen();
+  return Promise.resolve();
+}
+// 当前处于全屏的窗口（兼容普通元素全屏与 iOS 视频原生全屏）
+function currentFsTarget(){
+  const fe = fsEl();
+  if(fe){
+    if(fe === playerWrap || fe === mvPlayer) return 'mv';
+    if(fe === recWrap || fe === recPreview) return 'rec';
+  }
+  if(mvPlayer.webkitDisplayingFullscreen) return 'mv';
+  if(recPreview.webkitDisplayingFullscreen) return 'rec';
+  return null;
+}
+// 根据全屏状态刷新两个全屏键文字：全屏 ⇄ 退出全屏
+function updateFullButtons(){
+  const t = currentFsTarget();
+  fullPlayer.textContent = t === 'mv' ? '⛶ 退出全屏' : '⛶ 全屏';
+  fullRec.textContent   = t === 'rec' ? '⛶ 退出全屏' : '⛶ 全屏';
+}
+document.addEventListener('fullscreenchange', ()=>{ if(!fsEl()) activeFullscreenEl = null; updateFullButtons(); });
+document.addEventListener('webkitfullscreenchange', ()=>{ if(!fsEl()) activeFullscreenEl = null; updateFullButtons(); });
+
+async function toggleFullscreen(targetEl){
+  const isVideo = targetEl.tagName === 'VIDEO';
+  // 仅支持视频原生全屏的浏览器（旧 iOS Safari）：直接全屏视频
+  if(isVideo && targetEl.webkitEnterFullscreen && !document.webkitFullscreenEnabled){
+    if(targetEl.webkitDisplayingFullscreen){ targetEl.webkitExitFullscreen && targetEl.webkitExitFullscreen(); }
+    else targetEl.webkitEnterFullscreen();
+    updateFullButtons();
+    return;
+  }
+  if(activeFullscreenEl && activeFullscreenEl !== targetEl){
+    try{ await exitFs(); }catch(e){}
+    activeFullscreenEl = null;
+  }
+  if(fsEl()){
+    try{ await exitFs(); }catch(e){}
+    activeFullscreenEl = null;
+  }else{
+    try{
+      await requestFs(targetEl);
+      activeFullscreenEl = targetEl;
+    }catch(e){
+      // 降级：对窗口内的视频元素做原生全屏
+      const v = targetEl.querySelector && targetEl.querySelector('video');
+      if(v && v.webkitEnterFullscreen){ v.webkitEnterFullscreen(); }
+      else if(v && (v.requestFullscreen || v.webkitRequestFullscreen)){
+        try{ await requestFs(v); }catch(e2){ alert('当前浏览器不支持该窗口全屏，请尝试直接播放视频。'); }
+      }
+      else{ alert('当前浏览器不支持该窗口全屏。'); }
+    }
+  }
+  updateFullButtons();
+}
+fullPlayer.onclick = async ()=>{ await toggleFullscreen(playerWrap); updateFullButtons(); };
+fullRec.onclick = async ()=>{ await toggleFullscreen(recWrap); updateFullButtons(); };
+
+// ====== 录制模块 ======
+let recType = 'webm'; // 当前录制文件的扩展名/格式
+
+// 选择当前浏览器支持的录制格式（iOS 只支持 mp4，安卓支持 webm）
+function pickRecMime(){
+  if(typeof MediaRecorder === 'undefined') return null;
+  const cands = ['video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  for(const t of cands){
+    try{ if(MediaRecorder.isTypeSupported(t)) return t; }catch(e){}
+  }
+  return null;
+}
+
+recStart.onclick = async ()=>{
+  if(typeof MediaRecorder === 'undefined'){
+    return alert('当前手机浏览器不支持画面录制(MediaRecorder)，请升级系统浏览器后再试。');
+  }
+  recChunks = [];
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+  }catch(e){
+    try{
+      // 部分手机无法同时取音视频，先只取画面
+      stream = await navigator.mediaDevices.getUserMedia({video:true});
+    }catch(e2){
+      return alert('无法获取摄像头/麦克风权限，请在浏览器设置中允许后重试。');
+    }
+  }
+  recPreview.srcObject = stream;
+  recPreview.play().catch(()=>{});
+
+  const mime = pickRecMime();
+  recType = (mime && mime.indexOf('mp4') >= 0) ? 'mp4' : 'webm';
+  const opts = mime ? {mimeType:mime} : {};
+  try{
+    mediaRecorder = new MediaRecorder(stream, opts);
+  }catch(e){
+    return alert('当前浏览器不支持该录制格式。');
+  }
+
+  recStatusArea.classList.remove('hidden');
+  recTimer.classList.remove('hidden');
+  recLight.classList.add('blink');
+  recStatusText.textContent = "录制中";
+  startRecTimer();
+
+  mediaRecorder.ondataavailable = e=>{if(e.data.size) recChunks.push(e.data);}
+  mediaRecorder.onstop = ()=>{
+    stopRecTimer();
+    recLight.classList.remove('blink');
+    recStatusText.textContent = "已停止";
+    setTimeout(()=>{
+      recStatusArea.classList.add('hidden');
+      recTimer.classList.add('hidden');
+    }, 1500);
+
+    const blob = new Blob(recChunks, {type: recType === 'mp4' ? 'video/mp4' : 'video/webm'});
+    const recUrl = URL.createObjectURL(blob);
+    recPreview.srcObject = null;
+    recPreview.src = recUrl;
+
+    const a = document.createElement('a');
+    a.href = recUrl;
+    const d = new Date();
+    a.download = `K歌录制_${d.getFullYear()}${d.getMonth()+1}${d.getDate()}_${d.getHours()}${d.getMinutes()}.${recType}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  mediaRecorder.start();
+}
+
+recStop.onclick = ()=>{
+  if(mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+}
+
+recReset.onclick = ()=>{
+  if(mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+  recPreview.srcObject = null;
+  recPreview.src = '';
+  recChunks = [];
+  resetRecTimer();
+  recLight.classList.remove('blink');
+  recStatusText.textContent = "";
+  recStatusArea.classList.add('hidden');
+  recTimer.classList.add('hidden');
+}
+
+// ===== 麦克风实时监听（让“麦克风/混合音”模式真正把麦声回放出来）=====
+let micMonitorStream = null;
+let micMonitorCtx = null;
+let micMonitorSrc = null;
+async function setMicMonitor(on){
+  if(on){
+    if(!micMonitorStream){
+      try{ micMonitorStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+      catch(e){ return false; }
+    }
+    if(!micMonitorCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return false;
+      try{
+        micMonitorCtx = new AC();
+        micMonitorSrc = micMonitorCtx.createMediaStreamSource(micMonitorStream);
+        micMonitorSrc.connect(micMonitorCtx.destination);
+      }catch(e){ return false; }
+    }
+    if(micMonitorCtx && micMonitorCtx.state === 'suspended'){ micMonitorCtx.resume().catch(()=>{}); }
+    return true;
+  }else{
+    try{ if(micMonitorCtx) micMonitorCtx.close(); }catch(e){}
+    micMonitorCtx = null; micMonitorSrc = null;
+    if(micMonitorStream){ micMonitorStream.getTracks().forEach(t=>t.stop()); micMonitorStream = null; }
+    return true;
+  }
+}
+
+// 音频模式切换
+audioMode.onchange = async ()=>{
+  const mode = audioMode.value;
+  if(mode === 'original'){
+    mvPlayer.muted = false;
+    await setMicMonitor(false);
+  }else if(mode === 'mic'){
+    mvPlayer.muted = true;
+    await setMicMonitor(true);
+  }else if(mode === 'mix'){
+    mvPlayer.muted = false;
+    await setMicMonitor(true);
+  }
+}
+
+// 初始化
+renderSongList();
+resetRecTimer();
+updateAudioOffset();
+syncSentenceSliders();
+</script>
+</body>
+</html>

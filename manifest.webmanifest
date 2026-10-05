@@ -1,0 +1,16 @@
+{
+  "name": "炫幻K歌练歌房",
+  "short_name": "K歌练歌房",
+  "description": "炫幻K歌练歌房 · 全网K歌、MV播放、单句复唱、录屏",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0620",
+  "theme_color": "#03001c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
