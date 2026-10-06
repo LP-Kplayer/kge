@@ -708,8 +708,14 @@ async function playSongByIndex(idx){
   if(!isCasting && !audioCtx){
     await initAudioGain();
   }
-  if(audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
-  await mvPlayer.play().catch(()=>{});
+  if(audioCtx && audioCtx.state === 'suspended'){
+    try{ await audioCtx.resume(); }catch(e){}
+  }
+  try{
+    await mvPlayer.play();
+  }catch(err){
+    alert("⚠️ 浏览器拦截了自动播放，请再点一次画面或「播放」按钮。");
+  }
 }
 
 // 自动下一首逻辑
@@ -854,6 +860,23 @@ playBtn.onclick = async ()=>{
 }
 mvPlayer.onplay = ()=> playBtn.textContent = '⏸ 暂停';
 mvPlayer.onpause = ()=> playBtn.textContent = '▶ 播放';
+
+// 视频加载失败时明确提示原因（手机端最常见：格式不支持）
+mvPlayer.onerror = ()=>{
+  if(!mvPlayer.src) return;
+  let msg = "视频无法加载";
+  if(mvPlayer.error){
+    switch(mvPlayer.error.code){
+      case 1: msg="加载被中止，请重新点一次播放"; break;
+      case 2: msg="网络错误，请重试"; break;
+      case 3: msg="视频文件已损坏或解码错误"; break;
+      case 4: msg="此视频格式手机不支持（多半是.MOV/HEVC，请转成MP4/H.264再试）"; break;
+    }
+  }
+  alert("⚠️ 无法播放：" + msg);
+};
+// 视频开始有数据时给个轻提示
+mvPlayer.onloadeddata = ()=>{ /* 正常就绪 */ };
 
 // 歌曲播放结束自动触发
 mvPlayer.onended = ()=>{
@@ -1160,6 +1183,13 @@ renderSongList();
 resetRecTimer();
 updateAudioOffset();
 syncSentenceSliders();
+
+// 注册服务工作者：让「添加到主屏幕」识别霓虹图标并支持离线打开
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
